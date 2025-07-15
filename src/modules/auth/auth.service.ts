@@ -4,6 +4,9 @@ import { LoginDto, RegisterDto } from './dto/dto';
 import * as bcrypt from 'bcrypt'
 import { JwtService } from '@nestjs/jwt';
 import { RegisterModel } from './models/models';
+import { FileUpload } from 'graphql-upload-ts';
+import { join } from 'path';
+import { createWriteStream, existsSync, mkdirSync } from 'fs';
 
 @Injectable()
 export class AuthService {
@@ -19,26 +22,47 @@ export class AuthService {
         }
     }
 
-    async register(payload:RegisterDto): Promise<RegisterModel>{
+    async register( payload: RegisterDto, avatar?: FileUpload): Promise<RegisterModel> {
         const isEmailExist = await this.prisma.user.findUnique({
-            where:{email:payload.email}
-        })
+        where: { email: payload.email },
+        });
+        if (isEmailExist) throw new ConflictException('Email already exists');
 
-        if(isEmailExist){
-            throw new ConflictException("Email already exists")
-        }
-
-        const hashed_pass = await bcrypt.hash(payload.password,10)
+        const hashed_pass = await bcrypt.hash(payload.password, 10);
 
         const newUser = await this.prisma.user.create({
-            data:{
-                ...payload,
-                password:hashed_pass
-            }
-        })
+        data: {
+            ...payload,
+            password: hashed_pass,
+        },
+        });
 
-        return  await this.generateToken(newUser.id)
+        let avatarUrl: string | undefined;
+        if (avatar) {
+        const uploadDir = join(process.cwd(), 'uploads');
+        if (!existsSync(uploadDir)) mkdirSync(uploadDir);
 
+        const { createReadStream, filename } = avatar;
+        const uniqueName = `${newUser.id}_${Date.now()}_${filename}`;
+        const filePath = join(uploadDir, uniqueName);
+
+        await new Promise<void> ((resolve, reject) => {
+            createReadStream()
+            .pipe(createWriteStream(filePath))
+            .on('finish', resolve)
+            .on('error', reject);
+        });
+
+        avatarUrl = `/uploads/${uniqueName}`;
+        }
+
+        const tokens = await this.generateToken(newUser.id);
+
+        return {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        avatarUrl,
+        };
     }
 
     async login(payload:LoginDto): Promise<RegisterModel> {

@@ -7,4 +7,7 @@ export class RegisterModel {
 
     @Field()
     refreshToken:string
+
+    @Field({ nullable: true })
+    avatarUrl?: string;
 }
