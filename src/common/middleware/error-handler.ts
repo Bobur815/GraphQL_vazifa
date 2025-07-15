@@ -1,21 +1,22 @@
-
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Catch, ArgumentsHost, HttpException } from '@nestjs/common';
+import { GqlExceptionFilter, GqlArgumentsHost } from '@nestjs/graphql';
+import { ApolloError } from 'apollo-server-express';
 
 @Catch(HttpException)
-export class HttpExceptionFilter implements ExceptionFilter {
+export class GraphQLExceptionFilter implements GqlExceptionFilter {
   catch(exception: HttpException, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
-    const status = exception.getStatus();
 
-    response
-      .status(status)
-      .json({
-        statusCode: status,
-        timestamp: new Date().toISOString(),
-        path: request.url,
-      });
+    const gqlHost = GqlArgumentsHost.create(host);
+    const { req } = gqlHost.getContext();
+
+    const errorResponse = exception.getResponse() as {
+      message?: string | string[];
+    };
+    const message =
+      Array.isArray(errorResponse.message)
+        ? errorResponse.message.join(', ')
+        : errorResponse.message || exception.message;
+
+    return new ApolloError(message, exception.getStatus().toString());
   }
 }

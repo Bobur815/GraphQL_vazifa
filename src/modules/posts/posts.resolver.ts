@@ -2,11 +2,11 @@ import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { PostsService } from "./posts.service";
 import { Post } from "./entities/posts.entities";
 import { CreatePostInput, UpdatePostDto } from "./dto/dto";
-import { HttpExceptionFilter } from "src/common/middleware/error-handler";
+import { GraphQLExceptionFilter } from "src/common/middleware/error-handler";
 import { UseFilters } from "@nestjs/common";
 
 @Resolver(() => Post)
-@UseFilters(new HttpExceptionFilter())
+@UseFilters(new GraphQLExceptionFilter())
 export class PostResolver{
     constructor(private readonly postService:PostsService){}
 

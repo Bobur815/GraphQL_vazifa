@@ -12,6 +12,9 @@ export class User {
     @Field()
     email:string
 
+    @Field()
+    role:string
+
     @Field(() => [Post], {nullable:true})
     posts?:Post[];
 }

@@ -3,14 +3,20 @@ import { UsersService } from './users.service';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
 import { User } from './entities/user.entity';
-import { UseFilters } from '@nestjs/common';
-import { HttpExceptionFilter } from 'src/common/middleware/error-handler';
+import { UseFilters, UseGuards } from '@nestjs/common';
+import { AuthGuard } from 'src/common/guard/jwt-auth.guard';
+import { GraphQLExceptionFilter } from 'src/common/middleware/error-handler';
+import { RolesGuard } from 'src/common/guard/roles.guards';
+import { Roles } from 'src/common/decorators/role.decorators';
+import { UserRole } from 'src/common/type/user-roles';
 
 @Resolver(() => User)
-@UseFilters(new HttpExceptionFilter())
+@UseFilters(new GraphQLExceptionFilter())
 export class UsersResolver {
   constructor(private readonly usersService: UsersService) {}
 
+  @UseGuards(AuthGuard,RolesGuard)
+  @Roles(UserRole.ADMIN)
   @Query(()=> [User], {name:'findAll'})
   findAll(): Promise<User[]> {
     return this.usersService.findAll();
